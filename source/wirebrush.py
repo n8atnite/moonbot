@@ -1,12 +1,3 @@
-# wirebrush.py - a scraper for climbing websites
-#
-# author:       n8
-# github:       n8atnite
-#
-# contributor:  mrp
-# github:       factormrp
-#
-
 import os
 import json
 import pickle
