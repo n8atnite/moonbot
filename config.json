@@ -1,0 +1,16 @@
+{
+    "URL" : "https://www.moonboard.com/",
+    "USERNAME" : "n8bot",
+    "PASSWORD" : "qr2RkyKTDt8rxG2",
+    "ROUTES" :
+        {
+            "login": "Account/Login/",
+            "dash": "Dashboard/Index",
+            "index": "Account/Index/",
+            "profiles": "Account/UserProfiles/",
+            "getprofiles": "Account/GetUserProfiles/",
+            "user": "Account/Profile/",
+            "getproblems": "Account/GetProblems/"
+        },
+    "VERBOSE" : false
+}
