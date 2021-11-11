@@ -113,7 +113,7 @@ def get_users(session, config):
     # capture POST request response as json and extract UIDs
     # optional: save json to file
     userIDs = []
-    pages = tqdm(range(1779+1836+1025, page_count))
+    pages = tqdm(range(page_count))
     for page in pages:
         users_payload["page"] = str(page+1)
         data = session.post(config.url+config.routes.getprofiles, data=users_payload).json()
