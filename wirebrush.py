@@ -79,49 +79,65 @@ def login(session, uname, pwd, url):
     }
     return session.post(url, headers=login_headers, data=login_payload)
 
-def get_users(session, config):
+def get_users(store, config):
     """
     Subroutine for scraping user profile info
     Return: list
     """
-    # send GET request to user profiles page
-    profiles_response = s.get(config.url+config.routes.profiles)
+    def get_from_session():
+        # send GET request to user profiles page
+        profiles_response = store.get(config.url+config.routes.profiles)
+        
+        # get token from caller to craft correct POST payload
+        token = get_token(profiles_response, 0) 
+        users_payload = {
+            "sort": "",
+            "page": "1",
+            "pageSize": "40",
+            "group": "",
+            "filter": "",
+            "__RequestVerificationToken": token
+        }
 
-    # get token from caller to craft correct POST payload
-    token = get_token(profiles_response, 0) 
-    users_payload = {
-        "sort": "",
-        "page": "1",
-        "pageSize": "40",
-        "group": "",
-        "filter": "",
-        "__RequestVerificationToken": token
-    }
+        # send POST request for user profile data
+        users_response = store.post(config.url+config.routes.getprofiles, data=users_payload)
 
-    # send POST request for user profile data
-    users_response = session.post(config.url+config.routes.getprofiles, data=users_payload)
+        # print to stdout if verbose
+        if config.verbose:
+            print("GetUserProfiles status: %s" % users_response.status_code)
+            print(users_response.headers)
+            print(users_response.text)
 
-    # print to stdout if verbose
-    if config.verbose:
-        print("GetUserProfiles status: %s" % users_response.status_code)
-        print(users_response.headers)
-        print(users_response.text)
+        # capture POST request response as json and extract only page count
+        page_count = get_page_count(int(users_response.json()["Total"]), 40)
 
-    # capture POST request response as json and extract only page count
-    page_count = get_page_count(int(users_response.json()["Total"]), 40)
+        # capture POST request response as json and extract UIDs
+        # optional: save json to file
+        userIDs = []
+        pages = tqdm(range(page_count))
+        for page in pages:
+            users_payload["page"] = str(page+1)
+            data = store.post(config.url+config.routes.getprofiles, data=users_payload).json()
+            userIDs.append([user["Id"] for user in data["Data"]])
+            if config.save:
+                write_to_file('data/users/users_%d.json' % page, data)
 
-    # capture POST request response as json and extract UIDs
-    # optional: save json to file
-    userIDs = []
-    pages = tqdm(range(page_count))
-    for page in pages:
-        users_payload["page"] = str(page+1)
-        data = session.post(config.url+config.routes.getprofiles, data=users_payload).json()
-        userIDs.append([user["Id"] for user in data["Data"]])
-        if config.save:
-            write_to_file('data/users/users_%d.json' % page, data)
+        return userIDs
 
-    return userIDs
+    def get_from_file():
+        userIDs = []
+        datadir = os.path.join('.', store)
+        for file in os.listdir(datadir):
+            fpath = os.path.join(datadir, file)
+            with open(fpath, 'r') as f:
+                userIDs += [user["Id"] for user in json.load(f)["Data"]]
+
+        if config.verbose:
+            print("user ID length: %s" % len(userIDs))
+
+        return userIDs
+
+    return get_from_file() if type(store) == str else get_from_session()
 
 def get_problems(session, config, uid):
     problems_payload = {
@@ -174,5 +190,13 @@ if __name__ == "__main__":
             print(login_response.text)
 
         # 
-        userIDs = get_users(s, config)
+        if not os.path.isdir('data/users'):
+            userIDs = get_users(s, config)
+        else:
+            userIDs = get_users('data/users', config)
+
+        # problems = {}
+        # if not os.path.isdir('data/problems'):
+        #     for uid in userIDs:
+        #         problems.update(get_problems(s, config, uid))
         # print(userIDs)
