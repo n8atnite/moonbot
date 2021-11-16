@@ -12,6 +12,6 @@
             "user": "Account/Profile/",
             "getproblems": "Account/GetProblems/"
         },
-    "verbose" : true,
-    "save" : false
+    "verbose" : false,
+    "save" : true
 }
