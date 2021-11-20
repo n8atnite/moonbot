@@ -8,6 +8,9 @@ selenium = "*"
 requests = "*"
 bs4 = "*"
 tqdm = "*"
+aiohttp = {extras = ["speedups"], version = "*"}
+asyncio = "*"
+aioify = "*"
 
 [dev-packages]
 

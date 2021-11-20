@@ -208,6 +208,7 @@ if __name__ == "__main__":
         # login to site
         details = (s, config.username, config.password, config.url+config.routes.login)
         login_response = login(*details)
+        assert login_response.headers.get('content-type') == 'application/json; charset=utf-8'
 
         # define the session specific cookies that have to be carried across requests
         cookies = (s.cookies["__RequestVerificationToken"], s.cookies["_MoonBoard"])

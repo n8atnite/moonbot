@@ -13,5 +13,7 @@
             "getproblems": "Account/GetProblems/"
         },
     "verbose" : false,
-    "save" : true
+    "save" : true,
+    "users_exist" : true,
+    "problems_exist" : false
 }
