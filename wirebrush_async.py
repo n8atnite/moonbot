@@ -9,7 +9,7 @@ from tqdm import tqdm
 USERS_PATH = './data/users.json'
 PROBLEMS_PATH = './data/problems/problems_{}.json'
 CONFIG_PATH = './config.json'
-MAX_CONCURRENT_REQUESTS = 100
+MAX_CONCURRENT_REQUESTS = 50
 NUMCHUNKS = 200
 
 class MoonBoardScraper:
@@ -20,18 +20,18 @@ class MoonBoardScraper:
         self.problems_payload = {
             "sort": "",
             "page": "1",
-            "pageSize": "15",
+            "pageSize": "100",
             "group": "",
             "filter": ""
         }
 
         self.timeout = aiohttp.ClientTimeout(
-            total=86400,
+            total=0,
             connect=None,
-            sock_connect=None,
-            sock_read=None
+            sock_connect=30,
+            sock_read=30
         )
-        self.connector = aiohttp.TCPConnector(force_close=True)
+        self.connector = aiohttp.TCPConnector(limit_per_host=MAX_CONCURRENT_REQUESTS)
         self.session = aiohttp.ClientSession(self.config.url, connector=self.connector, timeout=self.timeout)
 
     async def __aenter__(self):
@@ -90,10 +90,8 @@ class MoonBoardScraper:
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
         async with semaphore:
             bar = tqdm(total=len(tasks), position=0)
-            # responses = {}
             for task in asyncio.as_completed(tasks):
                 msg = await task
-                # responses.update(response)
                 bar.set_description(msg)
                 bar.update()
 
@@ -131,17 +129,19 @@ class MoonBoardScraper:
 
         return status.format(uid, tmp)
 
+    async def get_problems(self, uid, path):
+        pass
+
 async def main():
     async with MoonBoardScraper() as session:
         await session.login()
 
         users = session.get_users(USERS_PATH)
         chunks = [users[i::NUMCHUNKS] for i in range(NUMCHUNKS)]
-        bar = tqdm(total=len(chunks))
+        bar = tqdm(chunks)
         bar.set_description('Total')
-        for chunk in tqdm(chunks[5:]):
+        for chunk in bar:
             await session.execute_tasks([session.find_problems(user, PROBLEMS_PATH) for user in chunk])
-            bar.update()
 
 if __name__=='__main__':
     asyncio.run(main())
