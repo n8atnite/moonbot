@@ -19,7 +19,14 @@ def import_json(path):
     Return: tuple of data values
     """
     with open(path) as f:
-        return json.load(f, object_hook=lambda x: SimpleNamespace(**x)) 
+        return json.load(f) #object_hook=lambda x: SimpleNamespace(**x)) 
+
+def convert_to_simple_namespace(obj):
+    """
+    Takes data object and returns it as a SimpleNameSpace
+    Return: SimpleNameSpace
+    """
+    return SimpleNamespace(**obj)
 
 def write_to_file(name, obj):
     """
