@@ -41,7 +41,7 @@ def extract_board_data(board_type):
 def extract_move_string_data(moves,board_type):
     """
     Extracts moves from a string and looks up their attributes
-    Return: 
+    Return: tuple of strings
     """
     # get holdsetup for given board type
     holdsetup = extract_board_data(board_type)
@@ -51,12 +51,11 @@ def extract_move_string_data(moves,board_type):
 
     # for each move, get corresponding data
     for move in moves.split(","):
-        X = X + "," + holdsetup[move]["X"]
-        Y = Y + "," + holdsetup[move]["Y"]
-        R = R + "," + holdsetup[move]["R"]
-        D = D + "," + holdsetup[move]["D"]
-
-    
+        X += str(holdsetup[move]["X"]) if X == "" else ","+str(holdsetup[move]["X"])
+        Y += str(holdsetup[move]["Y"]) if Y == "" else ","+str(holdsetup[move]["Y"])
+        R += str(holdsetup[move]["Rotation"]) if R == "" else ","+str(holdsetup[move]["Rotation"])
+        D += str(holdsetup[move]["Direction"]) if D == "" else ","+str(holdsetup[move]["Direction"])
+    return X,Y,R,D
 
 
 def transform_problem_data(filedata):
@@ -65,21 +64,35 @@ def transform_problem_data(filedata):
     Return: DataFrame
     """
     # initialize master dataframe
-    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_ANGLES","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_ANGLE","BOARD_TYPE"])
+    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_ANGLE"])
 
     # for each problem in file, extract info
     for i,problem in enumerate(filedata.values()):
+        # convert problem to simple namespace for ease of access
         problem = core.convert_to_simple_namespace(problem)
+
+        # initialize row entry container
         entry = []
+
+        # add string representation of route moves
         entry.append(",".join([a["Description"] for a in problem.Moves]))
+
+        # add string representations of starting moves and ending moves
         entry.append(",".join([a["Description"] for a in problem.Moves if a.get("IsStart")]))
         entry.append(",".join([a["Description"] for a in problem.Moves if a.get("IsEnd")]))
-        entry.append(",".join(extract_move_string_data(entry[2],problem.Holdsetup["Description"].lower())))
+        
+        # extract locational,rotational, and directional data for each move
+        X,Y,R,D = extract_move_string_data(entry[0],problem.Holdsetup["Description"].lower())
+        entry.append(X)
+        entry.append(Y)
+        entry.append(R)
+        entry.append(D)
+
+        # add grade, benchmark, repeats, and user rating
         entry.append(GRADEBOOK.index(problem.Grade))
         entry.append(problem.IsBenchmark)
         entry.append(problem.Repeats)
         entry.append(problem.UserRating)
-        entry.append()
         entry.append(int(problem.MoonBoardConfiguration["Description"][:2]))
         df.loc[i,:] = entry
     return df
@@ -90,7 +103,7 @@ def extract_data(directory_path):
     Return: DataFrame
     """
     # initialize master dataframe
-    df = pd.DataFrame(columns=["ROUTE_ID","ROUTE_NAME","ROUTE_MOVES","ROUTE_START","ROUTE_END","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_TYPE","BOARD_ANGLE"])
+    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_ANGLE"])
 
     # extract problem data from each file in the data directory
     with tqdm(os.scandir(directory_path)) as it:
@@ -120,9 +133,9 @@ if __name__ == "__main__":
     # extract all data into a dataframe
     df = extract_data(data_directory_path)
 
-    print("Length of dataframe",len(df))
     print(df.head())
     print(df.columns)
+    print("Length of dataframe",len(df))
     print("Length of unique dataframe",len(df.drop_duplicates()))
 
     
