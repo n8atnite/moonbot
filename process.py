@@ -1,7 +1,6 @@
 import os
 import core
 import pandas as pd
-from tqdm import tqdm
 
 ##########
 # GLOBAL #
@@ -106,7 +105,7 @@ def extract_data(directory_path):
     df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_ANGLE"])
 
     # extract problem data from each file in the data directory
-    with tqdm(os.scandir(directory_path)) as it:
+    with os.scandir(directory_path) as it:
         for entry in it:
             if entry.name == "problems.json":
                 # specify the path to file
