@@ -7,7 +7,7 @@ A scraper for climbing websites
 ## Dependencies
 
 `pipenv`
-`requests`
+`requests` or `aiohttp`
 `BeautifulSoup`
 `tqdm`
 
