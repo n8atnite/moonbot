@@ -46,6 +46,7 @@ def get_users(store, config):
     Return: list
     """
     def get_from_session():
+        userIDs = []
         # send GET request to user profiles page
         profiles_response = store.get(config.url+config.routes.profiles)
         
@@ -74,12 +75,11 @@ def get_users(store, config):
 
         # capture POST request response as json and extract UIDs
         # optional: save json to file
-        userIDs = []
         pages = tqdm(range(page_count))
         for page in pages:
             users_payload["page"] = str(page+1)
             data = store.post(config.url+config.routes.getprofiles, data=users_payload).json()
-            userIDs.append([user["Id"] for user in data["Data"]])
+            userIDs += [user["Id"] for user in data["Data"]]
             if config.save:
                 core.write_to_file('data/users/users_%d.json' % page, data)
 
@@ -100,30 +100,55 @@ def get_users(store, config):
 
     return get_from_file() if type(store) == str else get_from_session()
 
-def get_problems(session, config, uid):
-    problems_payload = {
-        "sort": "",
-        "page": "1",
-        "pageSize": "15",
-        "group": "",
-        "filter": ""
-    }
+def get_problems(store, config, uids):
 
-    problems_response = session.post(config.url+config.routes.getproblems+uid, data=problems_payload)
-    if config.verbose:
-        print('GetProblems status: %s' % problems_response.status_code)
-        print(problems_response.headers)
-        print(problems_response.text)
+    def get_from_session():
+        problems_payload = {
+            "sort": "",
+            "page": "1",
+            "pageSize": "15",
+            "group": "",
+            "filter": ""
+        }
+
+        problems = {}
+        for uid in tqdm(uids[1230+38987+11852+10481:]):
+            user_problems = {}
+            problems_response = store.post(config.url+config.routes.getproblems+uid, data=problems_payload)
+            if config.verbose:
+                print('GetProblems status: %s' % problems_response.status_code)
+                print(problems_response.headers)
+                print(problems_response.text)
+
+            page_count = get_page_count(int(problems_response.json()["Total"]), 15)
+            if page_count == 0:
+                continue
+            
+            print("problems found for user %s" % uid)
+            for page in range(page_count):
+                problems_payload["page"] = str(page+1)
+                data = store.post(config.url+config.routes.getproblems+uid, data=problems_payload).json()
+                user_problems.update({x["Id"] : x for x in data["Data"]})
+            if config.save:
+                write_to_file('data/problems/problems_%s.json' % uid, user_problems)
+            problems.update(user_problems)
+
+        return problems
+
+    def get_from_file():
+        problems = {}
+        for file in os.listdir(store):
+            fpath = os.path.join(store, file)
+            with open(fpath, 'r') as f:
+                problems.update({x["Id"] : x for x in json.load(f)["Data"]})
+
+        if config.verbose:
+            print("user ID length: %s" % len(userIDs))
 
     page_count = core.get_page_count(int(problems_response.json()["Total"]), 15)
 
-    problems = {}
-    for page in range(page_count):
-        problems_payload["page"] = str(page+1)
-        data = session.post(config.url+config.routes.getproblems+uid, data=problems_payload).json()
-        problems.update({x["Id"] : x for x in data["Data"]})
+    return get_from_file() if type(store) == str else get_from_session()
 
-    return problems
 
 ##########
 # DRIVER #
@@ -137,6 +162,7 @@ if __name__ == "__main__":
         # login to site
         details = (s, config.username, config.password, config.url+config.routes.login)
         login_response = login(*details)
+        assert login_response.headers.get('content-type') == 'application/json; charset=utf-8'
 
         # define the session specific cookies that have to be carried across requests
         cookies = (s.cookies["__RequestVerificationToken"], s.cookies["_MoonBoard"])
@@ -151,13 +177,7 @@ if __name__ == "__main__":
             print(login_response.text)
 
         # 
-        if not os.path.isdir('data/users'):
-            userIDs = get_users(s, config)
-        else:
-            userIDs = get_users('data/users', config)
-
-        # problems = {}
-        # if not os.path.isdir('data/problems'):
-        #     for uid in userIDs:
-        #         problems.update(get_problems(s, config, uid))
-        # print(userIDs)
+        userIDs = get_users('data/users', config) if os.path.isdir('data/users') else get_users(s, config)            
+        # problems = get_problems('data/problems', config, userIDs) if os.path.isdir('data/problems') else get_problems(s, config, userIDs)
+        problems = get_problems(s, config, userIDs)
+        print(len(problems.keys()))

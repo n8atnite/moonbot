@@ -1,4 +1,5 @@
 dump
 data/*
 *.old
+wb_test.py
 __*__
