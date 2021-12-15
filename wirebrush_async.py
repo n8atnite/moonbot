@@ -2,7 +2,7 @@ import os
 import json
 import aiohttp
 import asyncio
-from types import SimpleNamespace
+from collections import namedtuple
 from bs4 import BeautifulSoup as bs
 from tqdm import tqdm
 
@@ -46,7 +46,7 @@ class MoonBoardScraper:
         Return: tuple of configuration values
         """
         with open(path) as f:
-            return json.load(f, object_hook=lambda x: SimpleNamespace(**x)) 
+            return json.load(f, object_hook=lambda x: namedtuple('config', x.keys())(*x.values())) 
 
     def get_users(self, fpath):
        with open(fpath, 'r') as f:
@@ -129,9 +129,6 @@ class MoonBoardScraper:
 
         return status.format(uid, tmp)
 
-    async def get_problems(self, uid, path):
-        pass
-
 async def main():
     async with MoonBoardScraper() as session:
         await session.login()
@@ -139,9 +136,11 @@ async def main():
         users = session.get_users(USERS_PATH)
         chunks = [users[i::NUMCHUNKS] for i in range(NUMCHUNKS)]
         bar = tqdm(chunks)
-        bar.set_description('Total')
-        for chunk in bar:
-            await session.execute_tasks([session.find_problems(user, PROBLEMS_PATH) for user in chunk])
+        for board, query in session.config.boards._asdict().items():
+            bar.set_description(board)
+            session.problems_payload["filter"] = query
+            for chunk in bar:
+                await session.execute_tasks([session.find_problems(user, PROBLEMS_PATH) for user in chunk])
 
 if __name__=='__main__':
     asyncio.run(main())

@@ -2,18 +2,16 @@
     "url" : "https://www.moonboard.com/",
     "username" : "n8bot",
     "password" : "qr2RkyKTDt8rxG2",
-    "routes" :
-        {
-            "login": "Account/Login/",
-            "dash": "Dashboard/Index",
-            "index": "Account/Index/",
-            "profiles": "Account/UserProfiles/",
-            "getprofiles": "Account/GetUserProfiles/",
-            "user": "Account/Profile/",
-            "getproblems": "Account/GetProblems/"
-        },
     "verbose" : false,
     "save" : true,
     "users_exist" : true,
-    "problems_exist" : false
+    "problems_exist" : false,
+    "boards" : {
+        "mini_2020" : "",
+        "masters_2019_40" : "setupId~eq~'17'~and~Configuration~eq~1",
+        "masters_2019_25" : "setupId~eq~'17'~and~Configuration~eq~2",
+        "masters_2017_40" : "setupId~eq~'15'~and~Configuration~eq~1",
+        "masters_2017_25" : "setupId~eq~'15'~and~Configuration~eq~2",
+        "original_2016" : "setupId~eq~'1'"
+    }
 }
