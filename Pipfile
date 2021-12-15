@@ -11,6 +11,7 @@ tqdm = "*"
 aiohttp = {extras = ["speedups"], version = "*"}
 asyncio = "*"
 aioify = "*"
+pandas = "*"
 
 [dev-packages]
 

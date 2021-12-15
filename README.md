@@ -9,6 +9,7 @@ A scraper for climbing websites
 `pipenv`
 `requests`
 `BeautifulSoup`
+`tqdm`
 
 #### Credits
 

@@ -1,59 +1,13 @@
 import os
+import core
 import json
-import pickle
-import argparse
 import requests
-from types import SimpleNamespace
-from bs4 import BeautifulSoup as bs
 from tqdm import tqdm
+from bs4 import BeautifulSoup as bs
 
 #######
 # API #
 #######
-
-def get_page_count(total, size):
-    return total//size + 1 if total > 0 else 0
-
-def import_config(path):
-    """
-    Loads in global configuration from json from given path
-    Return: tuple of configuration values
-    """
-    with open(path) as f:
-        return json.load(f, object_hook=lambda x: SimpleNamespace(**x)) 
-
-def dir_open(path, rw:str):
-    """ 
-    Open path and create directories as needed
-    """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    return open(path, rw)
-
-def write_to_file(name, obj):
-    """
-    Handler for writing an object into a file with given name
-    Return: None
-    """
-    # identify extension of object
-    ext = os.path.splitext(name)[1].lower()
-
-    # handle case of txt
-    if ext == ".txt":
-        with dir_open(name, "w") as file:
-            try:
-                thing = str(obj)
-            except TypeError:
-                print("Cannot convert object to string. Skipping file write...")
-                return
-            file.write(thing)
-    # handle case of json
-    elif ext == ".json":
-        with dir_open(name, "w") as file:
-            try:
-                json.dump(obj, file, indent=4)
-            except:
-                print("Cannot jsonify object. Skipping file write...")
-                return
 
 def get_token(response, index):
     """
@@ -117,7 +71,7 @@ def get_users(store, config):
             print(users_response.text)
 
         # capture POST request response as json and extract only page count
-        page_count = get_page_count(int(users_response.json()["Total"]), 40)
+        page_count = core.get_page_count(int(users_response.json()["Total"]), 40)
 
         # capture POST request response as json and extract UIDs
         # optional: save json to file
@@ -127,7 +81,7 @@ def get_users(store, config):
             data = store.post(config.url+config.routes.getprofiles, data=users_payload).json()
             userIDs += [user["Id"] for user in data["Data"]]
             if config.save:
-                write_to_file('data/users/users_%d.json' % page, data)
+                core.write_to_file('data/users/users_%d.json' % page, data)
 
         return userIDs
 
@@ -191,7 +145,7 @@ def get_problems(store, config, uids):
         if config.verbose:
             print("user ID length: %s" % len(userIDs))
 
-        return problems
+    page_count = core.get_page_count(int(problems_response.json()["Total"]), 15)
 
     return get_from_file() if type(store) == str else get_from_session()
 
@@ -201,7 +155,7 @@ def get_problems(store, config, uids):
 ##########
 if __name__ == "__main__":
     # define path to config file and import
-    config = import_config('config.json')
+    config = core.import_json('config.json')
 
     # spawn a session
     with requests.session() as s:
