@@ -56,14 +56,13 @@ def extract_move_string_data(moves,board_type):
         D += str(holdsetup[move]["Direction"]) if D == "" else ","+str(holdsetup[move]["Direction"])
     return X,Y,R,D
 
-
 def transform_problem_data(filedata):
     """
     Transforms data from a json file to a dataframe of values
     Return: DataFrame
     """
     # initialize master dataframe
-    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_ANGLE"])
+    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","BOARD_ANGLE","REPEATS","ROUTE_GRADE","IS_BENCHMARK","RATING"])
 
     # for each problem in file, extract info
     for i,problem in enumerate(filedata.values()):
@@ -88,11 +87,11 @@ def transform_problem_data(filedata):
         entry.append(D)
 
         # add grade, benchmark, repeats, and user rating
-        entry.append(GRADEBOOK.index(problem.Grade))
-        entry.append(problem.IsBenchmark)
-        entry.append(problem.Repeats)
-        entry.append(problem.UserRating)
         entry.append(int(problem.MoonBoardConfiguration["Description"][:2]))
+        entry.append(int(problem.Repeats))
+        entry.append(GRADEBOOK.index(problem.Grade))
+        entry.append(1 if problem.IsBenchmark == "True" else 0)
+        entry.append(int(problem.UserRating))
         df.loc[i,:] = entry
     return df
 
@@ -102,7 +101,7 @@ def extract_data(directory_path):
     Return: DataFrame
     """
     # initialize master dataframe
-    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","ROUTE_GRADE","IS_BENCHMARK","REPEATS","RATING","BOARD_ANGLE"])
+    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","BOARD_ANGLE","REPEATS","ROUTE_GRADE","IS_BENCHMARK","RATING"])
 
     # extract problem data from each file in the data directory
     with os.scandir(directory_path) as it:
@@ -120,21 +119,31 @@ def extract_data(directory_path):
                 df = df.append(filedf)
     return df
 
+def split_samples_from_conditionals(df,conditional_column_len):
+    """
+    Separates data from one frame into two on specified columns
+    Return: tuple of dataframes
+    """
+    samples = df.drop(columns=df.columns[-conditional_column_len:])
+    conditionals = df.drop(columns=df.columns[:len(df.columns)-conditional_column_len])
+    return samples,conditionals
+
 ##########
 # DRIVER #
 ##########
 
 if __name__ == "__main__":
-
     # specify the path to data directory
     data_directory_path = os.path.join("data")        
     
     # extract all data into a dataframe
     df = extract_data(data_directory_path)
 
-    print(df.head())
-    print(df.columns)
-    print("Length of dataframe",len(df))
-    print("Length of unique dataframe",len(df.drop_duplicates()))
+    # split samples from conditionals
+    samples,conditionals = split_samples_from_conditionals(df,3)
 
+    print(samples.head())
+    print(samples.columns)
+    print(conditionals.head())
+    print(conditionals.columns)
     

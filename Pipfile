@@ -8,9 +8,16 @@ selenium = "*"
 requests = "*"
 bs4 = "*"
 tqdm = "*"
+asyncio = "*"
+aioify = "*"
 pandas = "*"
+torch = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.8"
+
+[packages.aiohttp]
+extras = [ "speedups",]
+version = "*"
