@@ -12,6 +12,7 @@ asyncio = "*"
 aioify = "*"
 pandas = "*"
 torch = "*"
+matplotlib = "*"
 
 [dev-packages]
 

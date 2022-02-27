@@ -1,10 +1,16 @@
 import os
 import json
+import itertools
 from types import SimpleNamespace
 
 ##########
 # GLOBAL #
 ##########
+
+GRADEBOOK = ["5","5+","6A","6A+","6B","6B+","6C","6C+","7A","7A+","7B","7B+","7C","7C+","8A","8A+","8B","8B+","8C","8C+"]
+LETTERS = ["A","B","C","D","E","F","G","H","I","J","K"]
+NUMBERS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18"]
+HOLDS = ["".join(t) for t in itertools.product(LETTERS,NUMBERS)]
 
 #############
 # FUNCTIONS #

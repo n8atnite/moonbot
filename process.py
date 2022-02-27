@@ -6,11 +6,9 @@ import pandas as pd
 # GLOBAL #
 ##########
 
-GRADEBOOK = ["5","5+","6A","6A+","6B","6B+","6C","6C+","7A","7A+","7B","7B+","7C","7C+","8A","8A+","8B","8B+","8C","8C+"]
-
-#############
-# FUNCTIONS #
-#############
+#######
+# API #
+#######
 
 def extract_board_data(board_type):
     """
@@ -31,13 +29,13 @@ def extract_board_data(board_type):
             data = {
                 "X":hold["Location"]["X"],
                 "Y":hold["Location"]["Y"],
-                "Rotation":hold["Location"]["Rotation"],
-                "Direction":hold["Location"]["Direction"]
+                "R":hold["Location"]["Rotation"],
+                "D":hold["Location"]["Direction"]
             }
             holddict[key] = data
     return holddict
     
-def extract_move_string_data(moves,board_type):
+def extract_hold_string_data(moves,board_type):
     """
     Extracts moves from a string and looks up their attributes
     Return: tuple of strings
@@ -50,11 +48,18 @@ def extract_move_string_data(moves,board_type):
 
     # for each move, get corresponding data
     for move in moves.split(","):
-        X += str(holdsetup[move]["X"]) if X == "" else ","+str(holdsetup[move]["X"])
-        Y += str(holdsetup[move]["Y"]) if Y == "" else ","+str(holdsetup[move]["Y"])
-        R += str(holdsetup[move]["Rotation"]) if R == "" else ","+str(holdsetup[move]["Rotation"])
-        D += str(holdsetup[move]["Direction"]) if D == "" else ","+str(holdsetup[move]["Direction"])
+        X += str(holdsetup[move]["X"]) if X == "" else "," + str(holdsetup[move]["X"])
+        Y += str(holdsetup[move]["Y"]) if Y == "" else "," + str(holdsetup[move]["Y"])
+        R += str(holdsetup[move]["R"]) if R == "" else "," + str(holdsetup[move]["R"])
+        D += str(holdsetup[move]["D"]) if D == "" else "," + str(holdsetup[move]["D"])
     return X,Y,R,D
+
+def transform_hold_string_data(moves):
+    """
+    Transforms a string representation of moves into a numerical value
+    Return: int
+    """
+    return moves
 
 def transform_problem_data(filedata):
     """
@@ -62,7 +67,8 @@ def transform_problem_data(filedata):
     Return: DataFrame
     """
     # initialize master dataframe
-    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","BOARD_ANGLE","REPEATS","ROUTE_GRADE","IS_BENCHMARK","RATING"])
+    df = pd.DataFrame(columns=["PROBLEM_ID","ROUTE_HOLDS","ROUTE_START","ROUTE_END","HOLD_X_COORDS","HOLD_Y_COORDS","HOLD_ANGLES",
+                               "HOLD_DIRECTIONS","BOARD_ANGLE","REPEATS","ROUTE_GRADE","IS_BENCHMARK","RATING"])
 
     # for each problem in file, extract info
     for i,problem in enumerate(filedata.values()):
@@ -71,53 +77,49 @@ def transform_problem_data(filedata):
 
         # initialize row entry container
         entry = []
+        entry.append(i)
 
         # add string representation of route moves
-        entry.append(",".join([a["Description"] for a in problem.Moves]))
+        entry.append(",".join(sorted([core.HOLDS.index(m["Description"]) for m in problem.Moves])))
 
-        # add string representations of starting moves and ending moves
-        entry.append(",".join([a["Description"] for a in problem.Moves if a.get("IsStart")]))
-        entry.append(",".join([a["Description"] for a in problem.Moves if a.get("IsEnd")]))
-        
-        # extract locational,rotational, and directional data for each move
-        X,Y,R,D = extract_move_string_data(entry[0],problem.Holdsetup["Description"].lower())
-        entry.append(X)
-        entry.append(Y)
-        entry.append(R)
-        entry.append(D)
+        # add string representations of starting holds and ending holds
+        entry.append(",".join(sorted([core.HOLDS.index(m["Description"]) for m in problem.Moves if m.get("IsStart")])))
+        entry.append(",".join(sorted([core.HOLDS.index(m["Description"]) for m in problem.Moves if m.get("IsEnd")])))
+
+        # extract locational,rotational, and directional data for each hold
+        X,Y,R = extract_hold_string_data(",".join([a["Description"] for a in problem.Moves]),
+                                           problem.Holdsetup["Description"].lower())
+        entry.append(X); entry.append(Y); entry.append(R)
 
         # add grade, benchmark, repeats, and user rating
         entry.append(int(problem.MoonBoardConfiguration["Description"][:2]))
         entry.append(int(problem.Repeats))
-        entry.append(GRADEBOOK.index(problem.Grade))
+        entry.append(core.GRADEBOOK.index(problem.Grade))
         entry.append(1 if problem.IsBenchmark == "True" else 0)
         entry.append(int(problem.UserRating))
         df.loc[i,:] = entry
     return df
 
-def extract_data(directory_path):
+def extract_data(path):
     """
     Extracts data from multiple json files in specified directory into a DataFrame
     Return: DataFrame
     """
     # initialize master dataframe
-    df = pd.DataFrame(columns=["ROUTE_MOVES","ROUTE_START","ROUTE_END","MOVE_X_COORDS","MOVE_Y_COORDS","MOVE_ANGLES","MOVE_DIRECTIONS","BOARD_ANGLE","REPEATS","ROUTE_GRADE","IS_BENCHMARK","RATING"])
+    df = pd.DataFrame()
 
-    # extract problem data from each file in the data directory
-    with os.scandir(directory_path) as it:
-        for entry in it:
-            if entry.name == "problems.json":
-                # specify the path to file
-                path = os.path.join(directory_path,entry.name)
+    # extract data from file
+    filedata = core.import_json(path)
 
-                # extract data from file
-                filedata = core.import_json(path)
+    # Convert json to DataFrame
+    filedf = transform_problem_data(filedata)
 
-                # Convert json to DataFrame
-                filedf = transform_problem_data(filedata)
+    df = df.append(filedf)
 
-                df = df.append(filedf)
-    return df
+    # if empty dataframe, return no problems data exception
+    if len(df) == 0:
+        raise Exception("ExtractionError:\tProblem data not found or extracted")
+    return df #.astype("float64")
 
 def split_samples_from_conditionals(df,conditional_column_len):
     """
@@ -133,17 +135,16 @@ def split_samples_from_conditionals(df,conditional_column_len):
 ##########
 
 if __name__ == "__main__":
-    # specify the path to data directory
-    data_directory_path = os.path.join("data")        
+    # specify the path to data file
+    path = os.path.join("data","problems.json")        
     
     # extract all data into a dataframe
-    df = extract_data(data_directory_path)
+    df = extract_data(path)
 
     # split samples from conditionals
     samples,conditionals = split_samples_from_conditionals(df,3)
 
+    print(samples.info())
     print(samples.head())
-    print(samples.columns)
+    print(conditionals.info())
     print(conditionals.head())
-    print(conditionals.columns)
-    

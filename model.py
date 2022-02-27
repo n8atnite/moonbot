@@ -7,9 +7,9 @@ import numpy as np
 # GLOBAL #
 ##########
 
-#############
-# FUNCTIONS #
-#############
+#######
+# API #
+#######
 
 def initialize_parameters_xavier(size):
     """
@@ -19,6 +19,14 @@ def initialize_parameters_xavier(size):
     dim = size[0]
     std = 1.0 / np.sqrt(dim/2.0)
     return torch.randn(*size)
+
+
+def transform_dataframe_to_tensor(df):
+    """
+    Transforms a DataFrame into a Tensor
+    Return: Tensor
+    """
+    return torch.Tensor(df.values)
 
 class CVAE:
     """
@@ -45,7 +53,7 @@ class CVAE:
         self.count = count
         self.learning_rate = lr
         self.x_to_h_weights = initialize_parameters_xavier([sample+conditional,hidden])
-        self.x_to_h_bias = torch.zeroes(hidden,requires_grad=True)
+        self.x_to_h_bias = torch.zeros(hidden,requires_grad=True)
         self.h_to_latent_mu = initialize_parameters_xavier([hidden,latent])
         self.h_to_latent_mu_bias = torch.zeros(latent,requires_grad=True)
         self.h_to_latent_var = initialize_parameters_xavier([hidden,latent])
@@ -96,15 +104,15 @@ class CVAE:
         Return: Tensor
         """
         input = torch.cat([z,c],1)
-        h = torch.nn.ReLU(input @ self.latent_to_h_weights + self.latent_to_h_bias)
-        return torch.nn.Sigmoid(h @ self.hidden_to_sample_weights + self.hidden_to_sample_bias)
+        h = torch.nn.functional.relu(input @ self.latent_to_h_weights + self.latent_to_h_bias)
+        return torch.nn.functional.sigmoid(h @ self.hidden_to_sample_weights + self.hidden_to_sample_bias)
 
     def calculate_loss(self,y,X,mu,var):
         """
         Calculates loss
         Return: Tensor
         """
-        reconstruction = torch.nn.CrossEntropyLoss(y,X,size_average=False) / self.minibatch_size
+        reconstruction = torch.nn.functional.cross_entropy(y,X,size_average=False) / self.minibatch_size
         kl = torch.mean(0.5*torch.sum(torch.exp(var)+mu**2-1.0-var,1))
         return reconstruction + kl
 
@@ -115,13 +123,17 @@ class CVAE:
         """
         # split data between samples and conditionals
         samples,conditionals = process.split_samples_from_conditionals(df,self.conditional_dim)
+
+        # convert dataframes to tensors
+        samples = transform_dataframe_to_tensor(samples)
+        conditionals = transform_dataframe_to_tensor(conditionals)
         
         for i in range(0,len(samples)-self.minibatch_size,self.minibatch_size):
             if verbose:
                 print(f"Fitting batch {i} of {len(samples)//self.minibatch_size+1}")
 
             # identify the next training batch
-            X,c = samples.loc[i:i+self.minibatch_size,:],conditionals.loc[i:i+self.minibatch_size,:]
+            X,c = samples[i:i+self.minibatch_size],conditionals[i:i+self.minibatch_size]
 
             # forward pass
             mu,var = self.encode(X,c)
@@ -166,7 +178,7 @@ if __name__ == "__main__":
     model = CVAE()
 
     # fit data to model
-    model.fit(df)
+    model.fit(df,verbose=1)
 
     # sample from fitted data
     model.sample([5,0,3])
