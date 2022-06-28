@@ -1,4 +1,4 @@
-# Wirebrush
+# Moonbot
 
 A scraper for climbing websites
 
